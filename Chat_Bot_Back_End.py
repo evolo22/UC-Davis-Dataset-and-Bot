@@ -2,6 +2,7 @@ import dearpygui.dearpygui as dpg
 import Chat_Bot_Front_End
 import pandas as pd
 import re
+import difflib
 
 
 
@@ -46,12 +47,19 @@ def get_answer(user_question):
     user_question = normalize(user_question)
 
     if user_question in knowledge_base:
-        return format_answer(knowledge_base[user_question], conversational=user_question.startswith("can you") or user_question.startswith("do you know"))
+        return format_answer(
+            knowledge_base[user_question],
+            conversational=user_question.startswith("can you") or user_question.startswith("do you know")
+        )
 
-    # Fallback: simple fuzzy matching
-    for question in knowledge_base:
-        if question in user_question:
-            return format_answer(knowledge_base[question], conversational=user_question.startswith("can you") or user_question.startswith("do you know"))
+    # Try close match with difflib
+    close_matches = difflib.get_close_matches(user_question, knowledge_base.keys(), n=1, cutoff=0.7)
+    if close_matches:
+        best_match = close_matches[0]
+        return format_answer(
+            knowledge_base[best_match],
+            conversational=user_question.startswith("can you") or user_question.startswith("do you know")
+        )
 
     return "Sorry, I don't know the answer to that."
 
