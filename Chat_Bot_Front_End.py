@@ -4,7 +4,7 @@ import Chat_Bot_Back_End
 
 def makeAllComponents(input_text_theme, text_color, background_color, message_window_color, default_font):
 
-    # Create main window
+    
     with dpg.window(tag="Background", label="Background",
                     no_title_bar=True, no_resize=True, no_move=True,
                     no_collapse=True, no_scrollbar=True,
@@ -16,7 +16,7 @@ def makeAllComponents(input_text_theme, text_color, background_color, message_wi
                 chat_bot_messages = dpg.add_text("How can I help you today?", wrap=500)
                 dpg.bind_item_theme(chat_bot_messages, text_color)
 
-            # Input box is now OUTSIDE the child window
+           
             input_box = dpg.add_input_text(tag="user_input", on_enter=True, callback=Chat_Bot_Back_End.handle_enter)
             dpg.bind_item_theme(input_box, input_text_theme)
             dpg.set_item_pos(input_box, [30, 590]) 
@@ -24,18 +24,18 @@ def makeAllComponents(input_text_theme, text_color, background_color, message_wi
             dpg.set_item_width(input_box, 500)
 
 
-    # Apply themes
+    
     dpg.bind_item_theme("Background", background_color)
     dpg.bind_item_theme("Message_Box", message_window_color)
 
-    # Position elements
+    
     dpg.set_item_pos("Message_Box", [20, 30])
     dpg.set_item_width("Background", dpg.get_viewport_width())
     dpg.set_item_height("Background", dpg.get_viewport_height())
     dpg.set_item_pos("Background", [0, 0])
 
     
-    # Font and start
+    
     dpg.bind_font(default_font)
     dpg.setup_dearpygui()
     dpg.set_primary_window("Background", True)
@@ -50,22 +50,22 @@ def main():
 
 
 
-        # Load font
+        
     with dpg.font_registry():
         default_font = dpg.add_font("BitcountSingle-VariableFont_CRSV,ELSH,ELXP,slnt,wght.ttf", 20)
 
-    # Theme: Background color of the main window
+    
     with dpg.theme() as background_color:
         with dpg.theme_component(dpg.mvAll):
             dpg.add_theme_color(dpg.mvThemeCol_WindowBg, (100, 150, 250, 255))  
 
-    # Theme: Message box background
+    
     with dpg.theme() as message_window_color:
         with dpg.theme_component(dpg.mvChildWindow):
             dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (255, 255, 255, 255)) 
             dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 10.0) 
 
-    # Theme: Rounded Input Text Box
+    
     with dpg.theme() as input_text_theme:
         with dpg.theme_component(dpg.mvInputText):
             dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (255, 255, 255, 255))      
