@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+
+<html lang=""en>
+<head>
+    <meta charset="UTF-8">
+    <meta name="'viewport" content= "width=device-width, initial-scale="1.0">
+    <title> UC Davis Chatbot </title>
+    <!-----Linking Icons------->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=keyboard_arrow_down" />
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="chatbot-popup">
+        <!---Chatbot Header-->
+        <div class="chat-header">
+            <div class="header-info">
+                <svg class="chatbot-logo" xmlns="http://www.w3.org/2000/svg" 
+                width="50" height="50" viewBox="0 0 1024 1024">
+                </svg>
+                <h2 class="logo-text">Chatbot</h2>
+            </div>
+            <button id="close-chatbot"
+            class="material-symbols-rounded">keyboard_arrow_down</button>
+        </div>
+
+        <!---Chatbot Body-->
+        <div class="chat-body">
+            <div class="message bot-message">
+                <svg class="bot-avatar" xmlns="http://www.w3.org/2000/svg" 
+                width="50" height="50" viewBox="0 0 1024 1024">
+                </svg>
+                <div class="message-text">Hey there <br /> How can I help you today?</div>
+            </div>
+            <div class="message user-message">
+                <div class="message-text">Lorem ipsum dolor sit am consec tetur adipisicing.</div>
+            </div>
+            <div class="message bot-message thinking">
+                <svg class="bot-avatar" xmlns="http://www.w3.org/2000/svg" 
+                width="50" height="50" viewBox="0 0 1024 1024">
+                </svg>
+                <div class="message-text">
+                    <div class="thinking-indicator">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!---Chatbot Footer-->
+        <div class="chat-footer">
+            <form action="#" class="chat-form">
+                <textarea placeholder="Message..." class="message-input">
+                </textarea>
+                <div class="chat-controls">
+                    <button type="submit"
+                    class="material-symbols-rounded"> keyboard_control_key </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
