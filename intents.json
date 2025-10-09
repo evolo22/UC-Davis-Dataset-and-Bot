@@ -1,6 +1,99 @@
 {
    "intents":[
+         {
+   "tag": "no_response",
+   "patterns": [
+      "No",
+      "Nah",
+      "Nope",
+      "Nada"
+   ],
+   "responses": [
+      "Sure, let me check the prerequisites for that course!",
+      "Of course! I’ll look up the prerequisites for you."
+   ],
+   "context_set": "no_"
+},
+         {
+   "tag": "yes_response",
+   "patterns": [
+      "Yes",
+      "Yup",
+      "Yesss",
+      "Yea"
+   ],
+   "responses": [
+      "Sure, let me check the prerequisites for that course!",
+      "Of course! I’ll look up the prerequisites for you."
+   ],
+   "context_set": "no_"
+},
+   {
+   "tag": "course_inquiry",
+   "patterns": [
+      "I need help with",
+      "I need help with code",
+      "What do you know about",
+      "What do you know about code"
+   ],
+   "responses": [
+      "Sure, let me check the prerequisites for that course!",
+      "Of course! I’ll look up the prerequisites for you."
+   ],
+   "context_set": "awaiting_course_code"
+},
  {
+   "tag": "prerequisite_inquiry",
+   "patterns": [
+      "Prerequisites",
+      "Prereq",
+      "What are the prerequisites?",
+      "What are the prerequisites for code?",
+      "Tell me the prerequisites for code",
+      "Do I need any prerequisites for code?",
+      "Can you tell me what’s required before code?",
+      "What do I need before taking code?"
+   ],
+   "responses": [
+      "Sure, let me check the prerequisites for that course!",
+      "Of course! I’ll look up the prerequisites for you."
+   ],
+   "context_set": "awaiting_course_code"
+},
+{
+   "tag": "description_inquiry",
+   "patterns": [
+      "Tell me about code",
+      "Tell me about",
+      "What is code about?",
+      "course description",
+      "course description of code",
+      "Give me the course description for code",
+      "Can you tell me more about code?",
+      "Describe code"
+   ],
+   "responses": [
+      "Sure, here’s the course description.",
+      "Here’s what that class covers:"
+   ],
+   "context_set": "awaiting_course_code"
+},
+{
+   "tag": "units_inquiry",
+   "patterns": [
+      "How many units is {code}?",
+      "What are the units for {code}?",
+      "Units for {code}",
+      "Credit hours for {code}",
+      "How many credits is {code}?"
+   ],
+   "responses": [
+      "Let me check how many units that class has.",
+      "Sure! Checking the units for that course."
+   ],
+   "context_set": "awaiting_course_code"
+},
+{
    "tag": "greeting",
    "patterns": [
       "Hi",
