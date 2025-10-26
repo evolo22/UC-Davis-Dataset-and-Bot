@@ -213,19 +213,71 @@ def find_course_row(user_input):
             return course_code, row
     return course_code, None
 
+def find_all_courses_per_title(user_input, courses_df):
+    import re
+
+    # stop words
+    stop_words = {"what","do","i","need","for","can","take","without","have","any","prerequisites","classes","before","complete"}
+    # extract words from input
+    words = [w for w in re.findall(r'\w+', user_input.lower()) if w not in stop_words]
+
+    if not words:
+        return []
+
+    # take the last meaningful word as the course title keyword
+    query = words[-1]
+    print("Query keyword:", query)  # for debugging
+
+    # search in Title column
+    matching_rows = courses_df[courses_df["Title"].str.lower().str.contains(query, na=False)]
+    list_of_courses_for_title = matching_rows["Course"].tolist()
+    
+    return list_of_courses_for_title
 
 def handle_course_inquiry(tag, user_input):
     
     course_code, row = find_course_row(user_input)
-
-    if not course_code:
-        return "Please include a valid course code (like MAT 021A or ECS 036A)."
-    if row is None:
-        return f"Sorry, I couldn’t find any information for {course_code}."
-
+    list_of_courses_per_title = find_all_courses_per_title(user_input, courses_df)
     
+    
+
+    if row is None and len(list_of_courses_per_title) == 0:
+        if course_code:
+            first_digit_idx = next((i for i, ch in enumerate(course_code) if ch.isdigit()), None)
+            if first_digit_idx is not None:
+                if not course_code[first_digit_idx] == '0':
+                    alt_course_code = course_code[:first_digit_idx] + '0' + course_code[first_digit_idx:]
+                    alt_code, alt_row = find_course_row(alt_course_code)
+                    if alt_row is not None:
+                        course_code, row = alt_code, alt_row
+                    else:
+                        return f"Sorry, I couldn’t find any information for {course_code}."
+                else:
+                    return f"Sorry, I couldn’t find any information for {course_code}."
+            else:
+                return f"Sorry, I couldn’t find any information for {user_input}."
+        else:
+            return "Please include a valid course code (like MAT 021A or ECS 036A)."
+
+
+            
     if tag == "prerequisite_inquiry":
-        return f"The prerequisites for {row['Course']} are: {row['Prerequisites']}"
+        if list_of_courses_per_title:
+            results = []
+            results.append("You will need to take:")
+            for code in list_of_courses_per_title:
+                found = False
+                for _, row in courses_df.iterrows():
+                    if code.replace(" ", "").upper() == row["Course"].replace(" ", "").upper():
+                        results.append(f"{row['Course']} with these prerequisites: {row.get('Prerequisites', 'None listed')}\n")
+                        found = True
+                        break
+                if not found:
+                    results.append(f"Course {code} not found.")
+            return "\n".join(results)
+        
+        else:
+            return f"The prerequisites for {row['Course']} are: {row['Prerequisites']}"
 
     elif tag == "description_inquiry":
         return f"{row['Course']} — {row['Title']} {row['Units']}.\nDescription: {row['Course Description']}"
