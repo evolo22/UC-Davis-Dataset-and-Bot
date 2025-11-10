@@ -11,7 +11,7 @@ import torch.nn.functional as f
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-courses_df = pd.read_excel("Computer Science Classes.xlsx")
+courses_df = pd.read_excel("electrical_and_computer_engineering.xlsx")
 
 class ChatBotModel(nn.Module):
     def __init__(self, input_size, output_size):
@@ -306,14 +306,15 @@ assistant.save_model("chatbot_model.pth", "chatbot_dims.json")
 
 
 
-print("Chatbot is ready! Type 'quit' to exit.")
+# print("Chatbot is ready! Type 'quit' to exit.")
 
-while True:
-    user_input = input("You: ")
-    if user_input.lower() in ["quit", "exit"]:
-        print("Chatbot: Goodbye!")
-        break
+# while True:
+#     user_input = input("You: ")
+#     if user_input.lower() in ["quit", "exit"]:
+#         print("Chatbot: Goodbye!")
+#         break
 
-    response = assistant.process_message(user_input)
-    print("Chatbot:", response)
+#     response = assistant.process_message(user_input)
+#     print("Chatbot:", response)
+print("Chatbot backend loaded and ready for Flask server.")
 
