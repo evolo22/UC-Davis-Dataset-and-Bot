@@ -1,0 +1,4 @@
+user_message,bot_response,predicted_intent
+Hello,"Hi there, how can I help?",greeting
+What are the prerequisites for EEc 100?,The prerequisites for EEC 100 are: (ENG 017C- or better orENG 017VC- or better); (MAT 022BorMAT 027B).,prerequisite_inquiry
+Thank you,I am glad I helped you,salutaion

@@ -143,27 +143,6 @@ class ChatbotAssistant:
         self.model = ChatBotModel(dimensons['input_size'], dimensons['output_size'])
         self.model.load_state_dict(torch.load(model_path, weights_only=True))
     
-    # def process_message(self, input_message):
-    #     words = self.tokenize_and_lemmatize(input_message)
-    #     bag = self.bag_of_words(input_message)
-
-    #     bag_tensor = torch.tensor([bag], dtype=torch.float32)
-
-    #     self.model.eval()
-    #     with torch.no_grad():
-    #         predictions = self.model(bag_tensor)
-
-    #     predicted_class_index = torch.argmax(predictions, dim=1).item()
-    #     prediced_intent = self.intents[predicted_class_index]
-
-    #     if self.function_mapping:
-    #         if prediced_intent in self.function_mapping:
-    #             self.function_mapping[prediced_intent]()
-            
-    #     if self.intents_responses[prediced_intent]:
-    #         return random.choice(self.intents_responses[prediced_intent])
-    #     else:
-    #         return None
 
     def process_message(self, input_message):
         words = self.tokenize_and_lemmatize(input_message)
@@ -183,23 +162,20 @@ class ChatbotAssistant:
 
         if self.prev_flag in ["salutaion"]:
             if predicted_intent == "no_response":
-                return "Glad I could help!"
+                response = "Glad I could help!"
             elif predicted_intent == "yes_response":
-                return "Sure, what can I help you with?"
-
-        # If we have any mapped functions (optional)
-        if self.function_mapping and predicted_intent in self.function_mapping:
+                response = "Sure, what can I help you with?"
+            else:
+                response = random.choice(self.intents_responses.get(predicted_intent, ["I'm not sure I understand that yet."]))
+        elif self.function_mapping and predicted_intent in self.function_mapping:
             self.function_mapping[predicted_intent]()
-
-        # If the intent is a course-related question, handle dynamically
-        if predicted_intent in ["prerequisite_inquiry", "description_inquiry", "units_inquiry", "course_inquiry"]:
-            return handle_course_inquiry(predicted_intent, input_message)
-
-        # Otherwise, fall back to standard responses
-        if predicted_intent in self.intents_responses and self.intents_responses[predicted_intent]:
-            return random.choice(self.intents_responses[predicted_intent])
+            response = random.choice(self.intents_responses.get(predicted_intent, ["Okay!"]))
+        elif predicted_intent in ["prerequisite_inquiry", "description_inquiry", "units_inquiry", "course_inquiry"]:
+            response = handle_course_inquiry(predicted_intent, input_message)
         else:
-            return "I'm not sure I understand that yet."
+            response = random.choice(self.intents_responses.get(predicted_intent, ["I'm not sure I understand that yet."]))
+
+        return response, predicted_intent
         
 
 def find_course_row(user_input):
