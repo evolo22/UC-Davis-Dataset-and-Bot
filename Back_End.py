@@ -11,6 +11,16 @@ import torch.nn.functional as f
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
+
+# Download NLTK data if not present
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
+    nltk.download('wordnet')
+    nltk.download('omw-1.4')
+
+
 courses_df = pd.read_excel("electrical_and_computer_engineering.xlsx")
 
 class ChatBotModel(nn.Module):

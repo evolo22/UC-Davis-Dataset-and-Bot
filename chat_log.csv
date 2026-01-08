@@ -2,3 +2,9 @@ user_message,bot_response,predicted_intent
 Hello,"Hi there, how can I help?",greeting
 What are the prerequisites for EEc 100?,The prerequisites for EEC 100 are: (ENG 017C- or better orENG 017VC- or better); (MAT 022BorMAT 027B).,prerequisite_inquiry
 Thank you,I am glad I helped you,salutaion
+Hello,"Hi there, how can I help?",greeting
+What can you tell me about ECS 50?,"Sorry, I couldn’t find any information for ECS50.",description_inquiry
+What are the prerequisites for ECS 50?,"Sorry, I couldn’t find any information for ECS50.",prerequisite_inquiry
+What are the prerequisites for UWP 101?,The prerequisites for UWP 101 are: UWP 001C- or better orUWP 001VC- or better orUWP 001YC- or better orCOM 001C- or better orCOM 002C- or better orCOM 003C- or better orCOM 004C- or better orENL 003C- or better orENL 003VC- or better orNAS 005C- or better or better orNAS 005VC- or better; and upper division standing.,prerequisite_inquiry
+What can you tell me about UWP 101?,"UWP 101 — Advanced Composition (4 units).
+Description: Instruction for students in all disciplines in advanced principles of academic and professional writing. Focus on writing tasks both within and beyond the academy. May be taught abroad.",description_inquiry
