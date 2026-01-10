@@ -14,9 +14,9 @@ from torch.utils.data import DataLoader, TensorDataset
 
 # Download NLTK data if not present
 try:
-    nltk.data.find('tokenizers/punkt')
+    nltk.data.find('tokenizers/punkt_tab')
 except LookupError:
-    nltk.download('punkt')
+    nltk.download('punkt_tab')
     nltk.download('wordnet')
     nltk.download('omw-1.4')
 
