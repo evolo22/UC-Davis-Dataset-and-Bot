@@ -36,15 +36,17 @@ chatForm.addEventListener("submit", async (e) => {
   const thinking = addThinkingIndicator();
 
   try {
-    const res = await fetch("http://127.0.0.1:5000/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userText })
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ message: userText })  // ✅ FIXED: userMessage → userText
     });
 
     const data = await res.json();
     chatBody.removeChild(thinking);
-    addMessage(data.reply || "Sorry, I didn’t catch that.", "bot-message");
+    addMessage(data.reply || "Sorry, I didn't catch that.", "bot-message");
   } catch (err) {
     chatBody.removeChild(thinking);
     addMessage("Error: could not reach the server.", "bot-message");
