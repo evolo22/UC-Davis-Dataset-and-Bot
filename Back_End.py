@@ -278,17 +278,34 @@ def handle_course_inquiry(tag, user_input):
         return "I can help with prerequisites, descriptions, or units. Try asking again!"
 
 
-# if os.path.isfile("chatbot_model.pth") is False:
-print("Here1")
-assistant = ChatbotAssistant("intents.json")
-print("Here2")
-assistant.parse_intents()
-print("Here3")
-assistant.prepare_data()
-print("Here4")
-assistant.train_model(batch_size=8, lr=0.001, epochs=50)
-print("Here5")
-assistant.save_model("chatbot_model.pth", "chatbot_dims.json")
+# # if os.path.isfile("chatbot_model.pth") is False:
+# print("Here1")
+# assistant = ChatbotAssistant("intents.json")
+# print("Here2")
+# assistant.parse_intents()
+# print("Here3")
+# assistant.prepare_data()
+# print("Here4")
+# assistant.train_model(batch_size=8, lr=0.001, epochs=50)
+# print("Here5")
+# assistant.save_model("chatbot_model.pth", "chatbot_dims.json")
+
+if os.path.isfile("chatbot_model.pth"):
+    print("Loading existing model...")
+    assistant = ChatbotAssistant("intents.json")
+    assistant.parse_intents()
+    assistant.load_model("chatbot_model.pth", "chatbot_dims.json")
+    print("Model loaded successfully!")
+else:
+    print("Training new model...")
+    assistant = ChatbotAssistant("intents.json")
+    assistant.parse_intents()
+    assistant.prepare_data()
+    assistant.train_model(batch_size=8, lr=0.001, epochs=50)
+    assistant.save_model("chatbot_model.pth", "chatbot_dims.json")
+    print("Model trained and saved!")
+
+print("Chatbot backend ready for Flask server.")
 
 
 
