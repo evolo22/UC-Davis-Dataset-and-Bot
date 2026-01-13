@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as f
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-
+import pickle 
 
 # Download NLTK data if not present
 try:
@@ -20,13 +20,11 @@ except LookupError:
     nltk.download('wordnet')
     nltk.download('omw-1.4')
 
-
 courses_df = pd.read_excel("electrical_and_computer_engineering.xlsx")
 
 class ChatBotModel(nn.Module):
     def __init__(self, input_size, output_size):
         super(ChatBotModel, self).__init__()
-
         self.fc1 = nn.Linear(input_size, 128)
         self.fc2 = nn.Linear(128, 64)
         self.fc3 = nn.Linear(64, output_size)
@@ -42,16 +40,13 @@ class ChatBotModel(nn.Module):
         return x          
 
 class ChatbotAssistant:
-
-    def __init__(self, intents_path, function_mappings = None):
+    def __init__(self, intents_path, function_mappings=None):
         self.model = None
         self.intents_path = intents_path
-
         self.documents = []
         self.vocabulary = []
         self.intents = []
         self.intents_responses = {}
-
         self.function_mapping = function_mappings
         self.prev_flag = ""
         self.x = None
@@ -59,26 +54,22 @@ class ChatbotAssistant:
     
     @staticmethod
     def tokenize_and_lemmatize(text):
-        lemmetizer = nltk.WordNetLemmatizer()
-
+        lemmatizer = nltk.WordNetLemmatizer()
         words = nltk.word_tokenize(text)
-        words = [lemmetizer.lemmatize(word.lower()) for word in words]
-
+        words = [lemmatizer.lemmatize(word.lower()) for word in words]
         return words
-    
     
     def bag_of_words(self, words):
         return [1 if word in words else 0 for word in self.vocabulary]
     
     def parse_intents(self):
         lemmatizer = nltk.WordNetLemmatizer()
-
         if os.path.exists(self.intents_path):
             with open(self.intents_path, 'r') as f:
                 intents_data = json.load(f)
 
-            intents = []
-            self.intents_reponses = {}
+            self.intents = []
+            self.intents_responses = {}
             self.vocabulary = []
             self.documents = []
 
@@ -93,8 +84,7 @@ class ChatbotAssistant:
                     self.vocabulary.extend(pattern_words)
                     self.documents.append((pattern_words, intent['tag']))
 
-                
-                self.vocabulary = sorted(set(self.vocabulary))
+            self.vocabulary = sorted(set(self.vocabulary))
 
     def prepare_data(self):
         bags = []
@@ -103,9 +93,7 @@ class ChatbotAssistant:
         for document in self.documents:
             words = document[0]
             bag = self.bag_of_words(words)
-
             intent_index = self.intents.index(document[1])
-
             bags.append(bag)
             indices.append(intent_index)
 
@@ -124,10 +112,8 @@ class ChatbotAssistant:
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.model.parameters(), lr=lr)
 
-
         for epoch in range(epochs):
             running_loss = 0.0
-
             for batch_X, batch_y in loader:
                 optimizer.zero_grad()
                 outputs = self.model(batch_X)
@@ -138,21 +124,35 @@ class ChatbotAssistant:
 
             print(f"Epoch {epoch + 1}: Loss: {running_loss / len(loader):.4f}")
 
-    
-    def save_model(self, model_path, dimensions_path):
+    def save_model(self, model_path, dimensions_path, vocab_path="vocabulary.pkl"):  
         torch.save(self.model.state_dict(), model_path)
 
         with open(dimensions_path, 'w') as f:
-            json.dump({ 'input_size': self.x.shape[1], 'output_size': len(self.intents) }, f)
+            json.dump({
+                'input_size': self.x.shape[1],
+                'output_size': len(self.intents)
+            }, f)
 
-    
-    def load_model(self, model_path, dimensions_path):
+        with open(vocab_path, 'wb') as f:
+            pickle.dump({
+                'vocabulary': self.vocabulary,
+                'intents': self.intents,
+                'intents_responses': self.intents_responses
+            }, f)
+
+    def load_model(self, model_path, dimensions_path, vocab_path="vocabulary.pkl"):  
         with open(dimensions_path, 'r') as f:
-            dimensons = json.load(f)
+            dimensions = json.load(f)
 
-        self.model = ChatBotModel(dimensons['input_size'], dimensons['output_size'])
+        
+        with open(vocab_path, 'rb') as f:
+            vocab_data = pickle.load(f)
+            self.vocabulary = vocab_data['vocabulary']
+            self.intents = vocab_data['intents']
+            self.intents_responses = vocab_data['intents_responses']
+
+        self.model = ChatBotModel(dimensions['input_size'], dimensions['output_size'])
         self.model.load_state_dict(torch.load(model_path, weights_only=True))
-    
 
     def process_message(self, input_message):
         words = self.tokenize_and_lemmatize(input_message)
@@ -290,11 +290,10 @@ def handle_course_inquiry(tag, user_input):
 # print("Here5")
 # assistant.save_model("chatbot_model.pth", "chatbot_dims.json")
 
-if os.path.isfile("chatbot_model.pth"):
+if os.path.isfile("chatbot_model.pth") and os.path.isfile("vocabulary.pkl"):
     print("Loading existing model...")
     assistant = ChatbotAssistant("intents.json")
-    assistant.parse_intents()
-    assistant.load_model("chatbot_model.pth", "chatbot_dims.json")
+    assistant.load_model("chatbot_model.pth", "chatbot_dims.json", "vocabulary.pkl")
     print("Model loaded successfully!")
 else:
     print("Training new model...")
@@ -302,7 +301,7 @@ else:
     assistant.parse_intents()
     assistant.prepare_data()
     assistant.train_model(batch_size=8, lr=0.001, epochs=50)
-    assistant.save_model("chatbot_model.pth", "chatbot_dims.json")
+    assistant.save_model("chatbot_model.pth", "chatbot_dims.json", "vocabulary.pkl")
     print("Model trained and saved!")
 
 print("Chatbot backend ready for Flask server.")
