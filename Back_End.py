@@ -12,6 +12,7 @@ from sentence_transformers import SentenceTransformer
 import pickle
 import gc
 
+# Reduce PyTorch memory usage
 torch.set_num_threads(1)
 
 courses_df = pd.read_excel("electrical_and_computer_engineering.xlsx")

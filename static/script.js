@@ -3,6 +3,9 @@ const messageInput = document.querySelector('.message-input');
 const chatForm = document.querySelector('.chat-form');
 const closeButton = document.getElementById('close-chatbot');
 
+// Generate a unique session ID for this chat session
+const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
 // Function to scroll chat to bottom
 function scrollToBottom() {
     chatBody.scrollTop = chatBody.scrollHeight;
@@ -86,7 +89,10 @@ chatForm.addEventListener('submit', async (e) => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ message: userMessage })
+            body: JSON.stringify({ 
+                message: userMessage,
+                session_id: sessionId 
+            })
         });
         
         const data = await response.json();
@@ -94,8 +100,8 @@ chatForm.addEventListener('submit', async (e) => {
         // Remove thinking indicator
         thinkingElement.remove();
         
-        // Add bot response
-        const botMessageElement = createBotMessage(data.response || "Sorry, I couldn't process that.");
+        // Add bot response (Flask returns 'reply' not 'response')
+        const botMessageElement = createBotMessage(data.reply || "Sorry, I couldn't process that.");
         chatBody.appendChild(botMessageElement);
         
         // Scroll to bottom after adding bot message
