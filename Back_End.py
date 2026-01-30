@@ -12,7 +12,6 @@ from sentence_transformers import SentenceTransformer
 import pickle
 import gc
 
-# Reduce PyTorch memory usage
 torch.set_num_threads(1)
 
 courses_df = pd.read_excel("electrical_and_computer_engineering.xlsx")
@@ -137,7 +136,7 @@ class ChatbotAssistant:
     def process_message(self, input_message):
         # Encode the user's message
         embedding = self.encoder.encode([input_message], show_progress_bar=False)[0]
-        embedding_tensor = torch.tensor([embedding], dtype=torch.float32)
+        embedding_tensor = torch.from_numpy(np.array([embedding])).float()
 
         self.model.eval()
         with torch.no_grad():
@@ -197,6 +196,22 @@ def find_all_courses_per_title(user_input, courses_df):
     
     return list_of_courses_for_title
 
+def format_prerequisites(prereq_text):
+    """Format prerequisite text to add proper spacing."""
+    if pd.isna(prereq_text) or prereq_text == "":
+        return "None listed"
+    
+    # Add space before "or" if it's not already there
+    prereq_text = re.sub(r'(\S)or\b', r'\1 or', prereq_text)
+    # Add space after "or" if it's not already there
+    prereq_text = re.sub(r'\bor(\S)', r'or \1', prereq_text)
+    # Add space between grade and dash (e.g., "C-" becomes "C -")
+    prereq_text = re.sub(r'([A-F])(-)', r'\1 \2', prereq_text)
+    # Add space after dash if followed by a letter (e.g., "- or" stays as is, but "-or" becomes "- or")
+    prereq_text = re.sub(r'-([a-z])', r'- \1', prereq_text)
+    
+    return prereq_text
+
 def handle_course_inquiry(tag, user_input):
     course_code, row = find_course_row(user_input)
     list_of_courses_per_title = find_all_courses_per_title(user_input, courses_df)
@@ -227,14 +242,16 @@ def handle_course_inquiry(tag, user_input):
                 found = False
                 for _, row in courses_df.iterrows():
                     if code.replace(" ", "").upper() == row["Course"].replace(" ", "").upper():
-                        results.append(f"{row['Course']} with these prerequisites: {row.get('Prerequisites', 'None listed')}\n")
+                        formatted_prereqs = format_prerequisites(row.get('Prerequisites', ''))
+                        results.append(f"{row['Course']} with these prerequisites: {formatted_prereqs}\n")
                         found = True
                         break
                 if not found:
                     results.append(f"Course {code} not found.")
             return "\n".join(results)
         else:
-            return f"The prerequisites for {row['Course']} are: {row['Prerequisites']}"
+            formatted_prereqs = format_prerequisites(row['Prerequisites'])
+            return f"The prerequisites for {row['Course']} are: {formatted_prereqs}"
 
     elif tag == "description_inquiry":
         return f"{row['Course']} — {row['Title']} {row['Units']}.\nDescription: {row['Course Description']}"
