@@ -25,6 +25,8 @@ function addThinkingIndicator() {
   return thinking;
 }
 
+const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const userText = messageInput.value.trim();
@@ -41,11 +43,17 @@ chatForm.addEventListener("submit", async (e) => {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ message: userText })  // ✅ FIXED: userMessage → userText
+      body: JSON.stringify({ 
+        message: userText,
+        session_id: sessionId
+      })  
     });
 
     const data = await res.json();
     chatBody.removeChild(thinking);
+
+    console.log(`Intent: ${data.intent}, Confidence: ${(data.confidence * 100).toFixed(1)}%`);
+
     addMessage(data.reply || "Sorry, I didn't catch that.", "bot-message");
   } catch (err) {
     chatBody.removeChild(thinking);
