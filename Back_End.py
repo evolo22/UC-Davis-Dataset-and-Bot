@@ -10,6 +10,10 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from sentence_transformers import SentenceTransformer
 import pickle
+import gc
+
+# Reduce PyTorch memory usage
+torch.set_num_threads(1)
 
 courses_df = pd.read_excel("electrical_and_computer_engineering.xlsx")
 
@@ -43,11 +47,13 @@ class ChatbotAssistant:
         self.x = None
         self.y = None
         
-        # Load sentence transformer (one-time ~400MB download)
+        # Load sentence transformer with lighter model
         print("Loading sentence transformer...")
-        self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
+        self.encoder = SentenceTransformer('paraphrase-MiniLM-L3-v2')  # Smaller model!
+        self.encoder.to('cpu')
         self.embedding_dim = 384
         print("Sentence transformer loaded!")
+        gc.collect() 
     
     def parse_intents(self):
         with open(self.intents_path, 'r') as f:
