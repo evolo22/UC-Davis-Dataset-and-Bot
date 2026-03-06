@@ -3,114 +3,90 @@ import json
 import pandas as pd
 import re
 import random
-import nltk
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as f
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
+from sentence_transformers import SentenceTransformer
+import pickle
+import gc
 
-
-# Download NLTK data if not present
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
-    nltk.download('wordnet')
-    nltk.download('omw-1.4')
-
+# Reduce PyTorch memory usage
+torch.set_num_threads(1)
 
 courses_df = pd.read_excel("electrical_and_computer_engineering.xlsx")
 
 class ChatBotModel(nn.Module):
-    def __init__(self, input_size, output_size):
+    def __init__(self, embedding_dim, output_size):
         super(ChatBotModel, self).__init__()
-
-        self.fc1 = nn.Linear(input_size, 128)
+        self.fc1 = nn.Linear(embedding_dim, 128)
+        self.bn1 = nn.BatchNorm1d(128)
         self.fc2 = nn.Linear(128, 64)
+        self.bn2 = nn.BatchNorm1d(64)
         self.fc3 = nn.Linear(64, output_size)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0.3)
 
     def forward(self, x):
-        x = self.relu(self.fc1(x))
+        x = self.relu(self.bn1(self.fc1(x)))
         x = self.dropout(x)
-        x = self.relu(self.fc2(x))
+        x = self.relu(self.bn2(self.fc2(x)))
         x = self.dropout(x)
-        x = self.fc3(x)  
-        return x          
+        x = self.fc3(x)
+        return x
 
 class ChatbotAssistant:
-
-    def __init__(self, intents_path, function_mappings = None):
+    def __init__(self, intents_path, function_mappings=None):
         self.model = None
         self.intents_path = intents_path
-
-        self.documents = []
-        self.vocabulary = []
         self.intents = []
         self.intents_responses = {}
-
         self.function_mapping = function_mappings
         self.prev_flag = ""
         self.x = None
         self.y = None
-    
-    @staticmethod
-    def tokenize_and_lemmatize(text):
-        lemmetizer = nltk.WordNetLemmatizer()
-
-        words = nltk.word_tokenize(text)
-        words = [lemmetizer.lemmatize(word.lower()) for word in words]
-
-        return words
-    
-    
-    def bag_of_words(self, words):
-        return [1 if word in words else 0 for word in self.vocabulary]
+        
+        # Load sentence transformer with lighter model
+        print("Loading sentence transformer...")
+        self.encoder = SentenceTransformer('paraphrase-MiniLM-L3-v2')  # Smaller model!
+        self.encoder.to('cpu')
+        self.embedding_dim = 384
+        print("Sentence transformer loaded!")
+        gc.collect() 
     
     def parse_intents(self):
-        lemmatizer = nltk.WordNetLemmatizer()
-
-        if os.path.exists(self.intents_path):
-            with open(self.intents_path, 'r') as f:
-                intents_data = json.load(f)
-
-            intents = []
-            self.intents_reponses = {}
-            self.vocabulary = []
-            self.documents = []
-
-            for intent in intents_data['intents']:
-                tag = intent['tag']
-                if tag not in self.intents:
-                    self.intents.append(tag)
-                    self.intents_responses[tag] = intent['responses']
-
-                for pattern in intent['patterns']:
-                    pattern_words = self.tokenize_and_lemmatize(pattern)
-                    self.vocabulary.extend(pattern_words)
-                    self.documents.append((pattern_words, intent['tag']))
-
-                
-                self.vocabulary = sorted(set(self.vocabulary))
-
+        with open(self.intents_path, 'r') as f:
+            intents_data = json.load(f)
+        
+        self.intents = []
+        self.intents_responses = {}
+        self.patterns = []
+        self.pattern_intents = []
+        
+        for intent in intents_data['intents']:
+            tag = intent['tag']
+            if tag not in self.intents:
+                self.intents.append(tag)
+                self.intents_responses[tag] = intent['responses']
+            
+            for pattern in intent['patterns']:
+                self.patterns.append(pattern)
+                self.pattern_intents.append(tag)
+    
     def prepare_data(self):
-        bags = []
-        indices = []
-
-        for document in self.documents:
-            words = document[0]
-            bag = self.bag_of_words(words)
-
-            intent_index = self.intents.index(document[1])
-
-            bags.append(bag)
-            indices.append(intent_index)
-
-        self.x = np.array(bags)
-        self.y = np.array(indices)
+        print("Encoding training patterns with Sentence-BERT...")
+        # Encode all patterns at once (much faster)
+        embeddings = self.encoder.encode(
+            self.patterns, 
+            show_progress_bar=True,
+            batch_size=32
+        )
+        labels = [self.intents.index(intent) for intent in self.pattern_intents]
+        
+        self.x = np.array(embeddings)
+        self.y = np.array(labels)
+        print(f"Prepared {len(self.x)} training examples with {self.embedding_dim}D embeddings")
     
     def train_model(self, batch_size, lr, epochs):
         X_tensor = torch.tensor(self.x, dtype=torch.float32)
@@ -119,58 +95,65 @@ class ChatbotAssistant:
         dataset = TensorDataset(X_tensor, y_tensor)
         loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-        self.model = ChatBotModel(self.x.shape[1], len(self.intents))
+        self.model = ChatBotModel(self.embedding_dim, len(self.intents))
 
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.model.parameters(), lr=lr)
 
-
         for epoch in range(epochs):
             running_loss = 0.0
-
             for batch_X, batch_y in loader:
                 optimizer.zero_grad()
                 outputs = self.model(batch_X)
                 loss = criterion(outputs, batch_y)
                 loss.backward()
                 optimizer.step()
-                running_loss += loss
+                running_loss += loss.item()
 
-            print(f"Epoch {epoch + 1}: Loss: {running_loss / len(loader):.4f}")
+            print(f"Epoch {epoch + 1}/{epochs}: Loss: {running_loss / len(loader):.4f}")
 
-    
-    def save_model(self, model_path, dimensions_path):
+    def save_model(self, model_path, data_path):
         torch.save(self.model.state_dict(), model_path)
+        
+        with open(data_path, 'wb') as f:
+            pickle.dump({
+                'intents': self.intents,
+                'intents_responses': self.intents_responses,
+                'embedding_dim': self.embedding_dim
+            }, f)
+        print(f"Model saved to {model_path}")
 
-        with open(dimensions_path, 'w') as f:
-            json.dump({ 'input_size': self.x.shape[1], 'output_size': len(self.intents) }, f)
+    def load_model(self, model_path, data_path):
+        with open(data_path, 'rb') as f:
+            data = pickle.load(f)
+            self.intents = data['intents']
+            self.intents_responses = data['intents_responses']
+            self.embedding_dim = data['embedding_dim']
 
-    
-    def load_model(self, model_path, dimensions_path):
-        with open(dimensions_path, 'r') as f:
-            dimensons = json.load(f)
-
-        self.model = ChatBotModel(dimensons['input_size'], dimensons['output_size'])
+        self.model = ChatBotModel(self.embedding_dim, len(self.intents))
         self.model.load_state_dict(torch.load(model_path, weights_only=True))
-    
+        self.model.eval()
 
     def process_message(self, input_message):
-        words = self.tokenize_and_lemmatize(input_message)
-        bag = self.bag_of_words(words)
-
-        bag_tensor = torch.tensor([bag], dtype=torch.float32)
+        # Encode the user's message
+        embedding = self.encoder.encode([input_message], show_progress_bar=False)[0]
+        embedding_tensor = torch.from_numpy(np.array([embedding])).float()
 
         self.model.eval()
         with torch.no_grad():
-            predictions = self.model(bag_tensor)
+            predictions = self.model(embedding_tensor)
+            probabilities = torch.softmax(predictions, dim=1)
+            confidence, predicted_class_index = torch.max(probabilities, dim=1)
+            confidence = confidence.item()
+            predicted_class_index = predicted_class_index.item()
 
-        predicted_class_index = torch.argmax(predictions, dim=1).item()
         predicted_intent = self.intents[predicted_class_index]
-
-        print(f"This is what it thinks the intent is: {predicted_intent}")
+        print(f"Intent: {predicted_intent}, Confidence: {confidence:.2%}")
+        
         self.prev_flag = predicted_intent
 
-        if self.prev_flag in ["salutaion"]:
+        # Handle responses
+        if self.prev_flag in ["salutation"]:
             if predicted_intent == "no_response":
                 response = "Glad I could help!"
             elif predicted_intent == "yes_response":
@@ -185,8 +168,8 @@ class ChatbotAssistant:
         else:
             response = random.choice(self.intents_responses.get(predicted_intent, ["I'm not sure I understand that yet."]))
 
-        return response, predicted_intent
-        
+        return response, predicted_intent, confidence
+
 
 def find_course_row(user_input):
     """Extracts course code and finds the corresponding row."""
@@ -200,32 +183,39 @@ def find_course_row(user_input):
     return course_code, None
 
 def find_all_courses_per_title(user_input, courses_df):
-    import re
-
-    # stop words
     stop_words = {"what","do","i","need","for","can","take","without","have","any","prerequisites","classes","before","complete"}
-    # extract words from input
     words = [w for w in re.findall(r'\w+', user_input.lower()) if w not in stop_words]
 
     if not words:
         return []
 
-    # take the last meaningful word as the course title keyword
     query = words[-1]
-    print("Query keyword:", query)  # for debugging
+    print("Query keyword:", query)
 
-    # search in Title column
     matching_rows = courses_df[courses_df["Title"].str.lower().str.contains(query, na=False)]
     list_of_courses_for_title = matching_rows["Course"].tolist()
     
     return list_of_courses_for_title
 
-def handle_course_inquiry(tag, user_input):
+def format_prerequisites(prereq_text):
+    """Format prerequisite text to add proper spacing."""
+    if pd.isna(prereq_text) or prereq_text == "":
+        return "None listed"
     
+    # Add space before "or" if it's not already there
+    prereq_text = re.sub(r'(\S)or\b', r'\1 or', prereq_text)
+    # Add space after "or" if it's not already there
+    prereq_text = re.sub(r'\bor(\S)', r'or \1', prereq_text)
+    # Add space between grade and dash (e.g., "C-" becomes "C -")
+    prereq_text = re.sub(r'([A-F])(-)', r'\1 \2', prereq_text)
+    # Add space after dash if followed by a letter (e.g., "- or" stays as is, but "-or" becomes "- or")
+    prereq_text = re.sub(r'-([a-z])', r'- \1', prereq_text)
+    
+    return prereq_text
+
+def handle_course_inquiry(tag, user_input):
     course_code, row = find_course_row(user_input)
     list_of_courses_per_title = find_all_courses_per_title(user_input, courses_df)
-    
-    
 
     if row is None and len(list_of_courses_per_title) == 0:
         if course_code:
@@ -237,16 +227,14 @@ def handle_course_inquiry(tag, user_input):
                     if alt_row is not None:
                         course_code, row = alt_code, alt_row
                     else:
-                        return f"Sorry, I couldn’t find any information for {course_code}."
+                        return f"Sorry, I couldn't find any information for {course_code}."
                 else:
-                    return f"Sorry, I couldn’t find any information for {course_code}."
+                    return f"Sorry, I couldn't find any information for {course_code}."
             else:
-                return f"Sorry, I couldn’t find any information for {user_input}."
+                return f"Sorry, I couldn't find any information for {user_input}."
         else:
             return "Please include a valid course code (like MAT 021A or ECS 036A)."
 
-
-            
     if tag == "prerequisite_inquiry":
         if list_of_courses_per_title:
             results = []
@@ -255,15 +243,16 @@ def handle_course_inquiry(tag, user_input):
                 found = False
                 for _, row in courses_df.iterrows():
                     if code.replace(" ", "").upper() == row["Course"].replace(" ", "").upper():
-                        results.append(f"{row['Course']} with these prerequisites: {row.get('Prerequisites', 'None listed')}\n")
+                        formatted_prereqs = format_prerequisites(row.get('Prerequisites', ''))
+                        results.append(f"{row['Course']} with these prerequisites: {formatted_prereqs}\n")
                         found = True
                         break
                 if not found:
                     results.append(f"Course {code} not found.")
             return "\n".join(results)
-        
         else:
-            return f"The prerequisites for {row['Course']} are: {row['Prerequisites']}"
+            formatted_prereqs = format_prerequisites(row['Prerequisites'])
+            return f"The prerequisites for {row['Course']} are: {formatted_prereqs}"
 
     elif tag == "description_inquiry":
         return f"{row['Course']} — {row['Title']} {row['Units']}.\nDescription: {row['Course Description']}"
@@ -271,36 +260,26 @@ def handle_course_inquiry(tag, user_input):
     elif tag == "units_inquiry":
         return f"{row['Course']} is worth {row['Units']}."
     
-    elif tag== "course_inquiry":
-            return f"What do you want to know about {course_code}.\nI can give you information on prerequisites, description, and units"
+    elif tag == "course_inquiry":
+        return f"What do you want to know about {course_code}?\nI can give you information on prerequisites, description, and units"
 
     else:
         return "I can help with prerequisites, descriptions, or units. Try asking again!"
 
 
-# if os.path.isfile("chatbot_model.pth") is False:
-print("Here1")
-assistant = ChatbotAssistant("intents.json")
-print("Here2")
-assistant.parse_intents()
-print("Here3")
-assistant.prepare_data()
-print("Here4")
-assistant.train_model(batch_size=8, lr=0.001, epochs=50)
-print("Here5")
-assistant.save_model("chatbot_model.pth", "chatbot_dims.json")
+# Training/Loading logic
+if os.path.isfile("chatbot_model_sbert.pth") and os.path.isfile("chatbot_data_sbert.pkl"):
+    print("Loading existing model...")
+    assistant = ChatbotAssistant("intents.json")
+    assistant.load_model("chatbot_model_sbert.pth", "chatbot_data_sbert.pkl")
+    print("Model loaded successfully!")
+else:
+    print("Training new model...")
+    assistant = ChatbotAssistant("intents.json")
+    assistant.parse_intents()
+    assistant.prepare_data()
+    assistant.train_model(batch_size=8, lr=0.001, epochs=50)
+    assistant.save_model("chatbot_model_sbert.pth", "chatbot_data_sbert.pkl")
+    print("Model trained and saved!")
 
-
-
-# print("Chatbot is ready! Type 'quit' to exit.")
-
-# while True:
-#     user_input = input("You: ")
-#     if user_input.lower() in ["quit", "exit"]:
-#         print("Chatbot: Goodbye!")
-#         break
-
-#     response = assistant.process_message(user_input)
-#     print("Chatbot:", response)
-print("Chatbot backend loaded and ready for Flask server.")
-
+print("Chatbot backend ready for Flask server.")

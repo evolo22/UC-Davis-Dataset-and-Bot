@@ -7,7 +7,6 @@
     <!-----Linking Icons------->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=keyboard_arrow_down" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script defer src="script.js"></script>
 </head>
 
 <body>
@@ -29,8 +28,14 @@
                 <svg class="bot-avatar" xmlns="http://www.w3.org/2000/svg" 
                 width="50" height="50" viewBox="0 0 1024 1024">
                 </svg>
-                <div class="message-text">Hey there <br /> How can I help you today? <br /> ALERT: This bot is in early stage development and is limited in the info it can provide  <br /> 
-                    Currently it can answer questions about prerequisites, couse description, units, and grade mode for EEC and ECE. Updates are coming soon!</div>
+                <div class="message-text">
+                    <span class="disclaimer">⚠️ BETA VERSION - This chatbot is in early development. Your inputs and responses will be recorded for future training.</span>
+                    
+                    Hey there!
+                    How can I help you today?
+                    
+                    Currently I can answer questions about prerequisites, course description, units, and grade mode for EEC and ECE courses. Updates are coming soon!
+                </div>
             </div>
         </div>
 
