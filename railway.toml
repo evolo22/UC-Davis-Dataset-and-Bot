@@ -5,4 +5,4 @@ builder = "nixpacks"
 NIXPACKS_PYTHON_VERSION = "3.11"
 
 [deploy]
-startCommand = "gunicorn app:app --bind 0.0.0.0:$PORT"
+startCommand = "gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120"
